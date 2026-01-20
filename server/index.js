@@ -14,6 +14,7 @@ app.use(
 );
 app.use(express.json());
 
+const path = require("path");
 const serviceAccountPath =
   process.env.FIREBASE_SERVICE_ACCOUNT_PATH ||
   "gocrave-app-firebase-adminsdk-fbsvc-cc6df44204.json";
@@ -23,8 +24,12 @@ if (!databaseURL) {
   throw new Error("Missing FIREBASE_DATABASE_URL");
 }
 
+const serviceAccountFile = path.isAbsolute(serviceAccountPath)
+  ? serviceAccountPath
+  : path.join(__dirname, "..", serviceAccountPath);
+
 admin.initializeApp({
-  credential: admin.credential.cert(require(`../${serviceAccountPath}`)),
+  credential: admin.credential.cert(require(serviceAccountFile)),
   databaseURL,
 });
 
