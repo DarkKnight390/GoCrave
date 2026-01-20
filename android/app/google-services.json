@@ -1,0 +1,40 @@
+{
+  "project_info": {
+    "project_number": "140339778121",
+    "firebase_url": "https://gocrave-app-default-rtdb.firebaseio.com",
+    "project_id": "gocrave-app",
+    "storage_bucket": "gocrave-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:140339778121:android:86a288d7e8e9c664abe598",
+        "android_client_info": {
+          "package_name": "com.gocrave.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "140339778121-kvhp36l2so6ev0hdmk42e4t4m4eg4rtq.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBEBYCjLa-qFP7Li7tR9bJ_vOngPLzMAAs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "140339778121-kvhp36l2so6ev0hdmk42e4t4m4eg4rtq.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

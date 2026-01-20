@@ -1,0 +1,6 @@
+{
+  "appId": "com.gocrave.app",
+  "appName": "GoCrave",
+  "webDir": "dist",
+  "bundledWebRuntime": false
+}

@@ -1,0 +1,193 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "users": {
+      "$uid": {
+        ".read": "$uid === auth.uid",
+        ".write": "$uid === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'admin'"
+      }
+    },
+    "presence": {
+      "$uid": {
+        ".read": "auth != null",
+        ".write": "$uid === auth.uid"
+      }
+    },
+    "runnerIndex": {
+      ".read": "auth != null",
+      ".write": "auth != null"
+    },
+    "runners": {
+      ".read": "auth != null",
+      "goCrave": {
+        "$runnerId": {
+          ".read": "auth != null",
+          ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+        }
+      },
+      "independent": {
+        "$runnerId": {
+          ".read": "auth != null",
+          ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+        }
+      },
+      "$runnerId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('runnerIndex/byUid').child(auth.uid).val() === $runnerId || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+        "presence": {
+          ".read": "auth != null",
+          ".write": "auth != null && root.child('runnerIndex/byUid').child(auth.uid).val() === $runnerId"
+        }
+      }
+    },
+    "runnerMetrics": {
+      ".read": true,
+      "$runnerId": {
+        ".read": true,
+        ".write": "auth != null"
+      }
+    },
+    "runnerComplaints": {
+      "$runnerId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "runnerRatings": {
+      "$runnerId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "runnerCheckins": {
+      ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+      "$runnerId": {
+        ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || root.child('runnerIndex/byUid').child(auth.uid).val() === $runnerId || root.child('runners').child($runnerId).child('authUid').val() === auth.uid)",
+        ".write": "auth != null && (root.child('runnerIndex/byUid').child(auth.uid).val() === $runnerId || root.child('runners').child($runnerId).child('authUid').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'admin')"
+      }
+    },
+    "ratingRequests": {
+      "$customerUid": {
+        ".read": "auth != null && auth.uid === $customerUid",
+        "$orderId": {
+          ".write": "auth != null && (auth.uid === $customerUid || root.child('orders').child($orderId).child('runnerId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'admin')"
+        }
+      }
+    },
+    "fcmTokens": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "runnerWarnings": {
+      "$runnerId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "subscriptions": {
+      "$runnerId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "restaurants": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "menus": {
+      ".read": true,
+      ".write": "auth != null"
+    },
+    "promotions": {
+      ".read": true,
+      ".write": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'"
+    },
+    "orders": {
+      ".read": "auth != null && (root.child('users').child(auth.uid).child('role').val() === 'admin' || (query.orderByChild == 'status' && query.equalTo == 'pending' && root.child('users').child(auth.uid).child('role').val() === 'runner' && root.child('runners').child(root.child('runnerIndex/byUid').child(auth.uid).val()).child('availability').val() === 'online') || (query.orderByChild == 'runnerId' && query.equalTo == auth.uid) || (query.orderByChild == 'userId' && query.equalTo == auth.uid))",
+      ".indexOn": ["status", "runnerId", "userId"],
+      "$orderId": {
+        ".read": "auth != null && (data.child('userId').val() === auth.uid || data.child('runnerId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+        ".write": "auth != null && (!data.exists() ? newData.child('userId').val() === auth.uid : (data.child('userId').val() === auth.uid || data.child('runnerId').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'admin' || (data.child('runnerId').val() === null && newData.child('runnerId').val() === auth.uid) || (data.child('runnerId').val() === null && newData.child('rejectedBy').child(auth.uid).val() === true)))"
+      }
+    },
+    "runnerLocationAccess": {
+      "$runnerId": {
+        "$customerUid": {
+          ".read": "auth != null && (auth.uid === $customerUid || auth.uid === $runnerId || root.child('runnerIndex/byUid').child(auth.uid).val() === $runnerId || root.child('runners').child($runnerId).child('authUid').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+          ".write": "auth != null && (auth.uid === $runnerId || root.child('runnerIndex/byUid').child(auth.uid).val() === $runnerId || root.child('runners').child($runnerId).child('authUid').val() === auth.uid || root.child('users').child(auth.uid).child('role').val() === 'admin' || (auth.uid === $customerUid && !newData.exists()))"
+        }
+      }
+    },
+    "runnerLocations": {
+      "$runnerId": {
+        ".read": "auth != null && (root.child('runnerLocationAccess').child($runnerId).child(auth.uid).val() === true || auth.uid === $runnerId || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+        ".write": "auth != null && auth.uid === $runnerId"
+      }
+    },
+    "liveLocationSessions": {
+      "$sessionId": {
+        ".read": "auth != null && (data.child('customerUid').val() === auth.uid || data.child('runnerUid').val() === auth.uid)",
+        ".write": "auth != null && (!data.exists() ? newData.child('customerUid').val() === auth.uid : (data.child('customerUid').val() === auth.uid || data.child('runnerUid').val() === auth.uid || root.child('orders').child(data.child('orderId').val()).child('runnerId').val() === auth.uid))",
+        "points": {
+          "$pointId": {
+            ".read": "auth != null && (root.child('liveLocationSessions').child($sessionId).child('customerUid').val() === auth.uid || root.child('liveLocationSessions').child($sessionId).child('runnerUid').val() === auth.uid)",
+            ".write": "auth != null && root.child('liveLocationSessions').child($sessionId).child('customerUid').val() === auth.uid"
+          }
+        }
+      }
+    },
+    "chatsIndex": {
+      "$customerUid": {
+        ".read": "auth != null && auth.uid === $customerUid",
+        ".write": "auth != null"
+      }
+    },
+    "chatsRunnerIndex": {
+      "$runnerId": {
+        ".read": "auth != null && (root.child('runnerIndex/byUid').child(auth.uid).val() === $runnerId || root.child('runners').child($runnerId).child('authUid').val() === auth.uid)",
+        ".write": "auth != null"
+      }
+    },
+    "chats": {
+      "support": {
+        ".read": "auth != null && root.child('users').child(auth.uid).child('role').val() === 'admin'",
+        "$customerUid": {
+          ".read": "auth != null && (auth.uid === $customerUid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+          ".write": "auth != null && (auth.uid === $customerUid || root.child('users').child(auth.uid).child('role').val() === 'admin')",
+          "messages": {
+            ".indexOn": ["createdAt"]
+          }
+        }
+      },
+      "runners": {
+        "$runnerId": {
+          "$customerUid": {
+            ".read": "auth != null && (auth.uid === $customerUid || root.child('runnerIndex/byUid').child(auth.uid).val() === $runnerId || root.child('runners').child($runnerId).child('authUid').val() === auth.uid)",
+            ".write": "auth != null && (auth.uid === $customerUid || root.child('runnerIndex/byUid').child(auth.uid).val() === $runnerId || root.child('runners').child($runnerId).child('authUid').val() === auth.uid)",
+            "messages": {
+              ".indexOn": ["createdAt"]
+            }
+          }
+        }
+      }
+    }
+    ,
+    "callsByPair": {
+      "$pairId": {
+        ".read": "auth != null && (data.child('customerUid').val() === auth.uid || data.child('runnerUid').val() === auth.uid || data.child('callerUid').val() === auth.uid || data.child('calleeUid').val() === auth.uid)",
+        ".write": "auth != null && (newData.child('customerUid').val() === auth.uid || newData.child('runnerUid').val() === auth.uid || newData.child('callerUid').val() === auth.uid || newData.child('calleeUid').val() === auth.uid || data.child('customerUid').val() === auth.uid || data.child('runnerUid').val() === auth.uid || data.child('callerUid').val() === auth.uid || data.child('calleeUid').val() === auth.uid)",
+        "candidates": {
+          "$uid": {
+            ".read": "auth != null && (root.child('callsByPair').child($pairId).child('customerUid').val() === auth.uid || root.child('callsByPair').child($pairId).child('runnerUid').val() === auth.uid || root.child('callsByPair').child($pairId).child('callerUid').val() === auth.uid || root.child('callsByPair').child($pairId).child('calleeUid').val() === auth.uid)",
+            ".write": "auth != null && (root.child('callsByPair').child($pairId).child('customerUid').val() === auth.uid || root.child('callsByPair').child($pairId).child('runnerUid').val() === auth.uid || root.child('callsByPair').child($pairId).child('callerUid').val() === auth.uid || root.child('callsByPair').child($pairId).child('calleeUid').val() === auth.uid)"
+          }
+        }
+      }
+      ,
+      ".indexOn": ["customerUid", "runnerUid"]
+    }
+  }
+}
