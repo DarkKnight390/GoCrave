@@ -7,9 +7,10 @@ const app = express();
 const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)
   : [];
+const allowAllOrigins = allowedOrigins.includes("*");
 app.use(
   cors({
-    origin: allowedOrigins.length ? allowedOrigins : true,
+    origin: allowAllOrigins || !allowedOrigins.length ? true : allowedOrigins,
   })
 );
 app.use(express.json());
