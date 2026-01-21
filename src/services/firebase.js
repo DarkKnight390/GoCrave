@@ -1,6 +1,6 @@
 ﻿import { initializeApp, getApps, getApp } from "firebase/app";
 import { getDatabase } from "firebase/database";
-import { getAuth, setPersistence, inMemoryPersistence } from "firebase/auth";
+import { getAuth, setPersistence, inMemoryPersistence, browserLocalPersistence } from "firebase/auth";
 import { getFunctions } from "firebase/functions";
 import { getStorage } from "firebase/storage";
 
@@ -21,6 +21,7 @@ export const db = getDatabase(app);
 export const rtdb = db;
 export const auth = getAuth(app);
 export const secondaryAuth = getAuth(app);
+setPersistence(auth, browserLocalPersistence);
 setPersistence(secondaryAuth, inMemoryPersistence);
 export const functions = getFunctions(app);
 export const storage = getStorage(app);

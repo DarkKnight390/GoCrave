@@ -2,6 +2,7 @@ import { Capacitor } from "@capacitor/core";
 import { Geolocation } from "@capacitor/geolocation";
 import { Camera } from "@capacitor/camera";
 import { PushNotifications } from "@capacitor/push-notifications";
+import { Filesystem } from "@capacitor/filesystem";
 
 const PROMPT_KEY = "gc_permissions_prompted_v1";
 
@@ -51,6 +52,12 @@ export const requestAppPermissions = async () => {
       : { state: "skipped" };
   } catch {
     results.photos = { state: "error" };
+  }
+
+  try {
+    results.storage = isNative ? await Filesystem.requestPermissions() : { state: "skipped" };
+  } catch {
+    results.storage = { state: "error" };
   }
 
   try {

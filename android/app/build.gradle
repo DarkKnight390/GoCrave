@@ -33,6 +33,14 @@ android {
             signingConfig signingConfigs.release
         }
     }
+
+    applicationVariants.all { variant ->
+        variant.outputs.each { output ->
+            def vName = variant.versionName ?: "1.0"
+            def vCode = variant.versionCode ?: 1
+            output.outputFileName = "GoCrave-v${vName}-${vCode}-${variant.name}.apk"
+        }
+    }
 }
 
 repositories {
