@@ -8,12 +8,48 @@ import { getRunnerIdByUid } from "../services/runners.service";
 import { requestPushPermission } from "../services/push.service";
 import { requestAppPermissionsOnce } from "../services/permissions.service";
 
+const PROFILE_CACHE_KEY = "gocrave_profile_cache";
+
+const loadCachedProfile = () => {
+  try {
+    const raw = localStorage.getItem(PROFILE_CACHE_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch {
+    return null;
+  }
+};
+
+const saveCachedProfile = (profile) => {
+  try {
+    if (!profile) {
+      localStorage.removeItem(PROFILE_CACHE_KEY);
+      return;
+    }
+    localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify(profile));
+  } catch {
+    // ignore storage errors
+  }
+};
 
 
 export const useAuthStore = create((set, get) => ({
   user: null,
   profile: null,
   loading: true,
+
+  refreshProfile: async (uidOverride) => {
+    const uid = uidOverride || get().user?.uid;
+    if (!uid) return;
+    try {
+      const profile = await getUserProfile(uid);
+      if (profile) {
+        set({ profile });
+        saveCachedProfile(profile);
+      }
+    } catch {
+      // keep existing cached profile
+    }
+  },
 
   initAuth: () => {
     let stopPresence = null;
@@ -23,12 +59,20 @@ export const useAuthStore = create((set, get) => ({
         if (!user) {
           if (stopPresence) stopPresence();
           set({ user: null, profile: null, loading: false });
+          saveCachedProfile(null);
           return;
         }
 
         try {
+          const cached = loadCachedProfile();
+          if (cached && cached?.uid === user.uid) {
+            set({ user, profile: cached, loading: true });
+          } else {
+            set({ user, profile: null, loading: true });
+          }
           const profile = await getUserProfile(user.uid);
           set({ user, profile, loading: false });
+          saveCachedProfile(profile);
           if (stopPresence) stopPresence();
           const runnerId = profile?.role === "runner"
             ? await getRunnerIdByUid(user.uid, user.email)
@@ -37,12 +81,21 @@ export const useAuthStore = create((set, get) => ({
           requestPushPermission(user.uid).catch(() => {});
           requestAppPermissionsOnce(user.uid).catch(() => {});
         } catch {
-          set({ user, profile: null, loading: false });
+          const cached = loadCachedProfile();
+          if (cached && cached?.uid === user.uid) {
+            set({ user, profile: cached, loading: false });
+          } else {
+            set({ user, profile: null, loading: false });
+          }
+          setTimeout(() => {
+            get().refreshProfile(user.uid);
+          }, 2000);
         }
       },
       () => {
         if (stopPresence) stopPresence();
         set({ user: null, profile: null, loading: false });
+        saveCachedProfile(null);
       }
     );
   },
@@ -51,7 +104,11 @@ export const useAuthStore = create((set, get) => ({
     if (!uid) throw new Error("Not logged in");
 
     // optimistic UI
-    set((s) => ({ profile: { ...s.profile, ...patch } }));
+    set((s) => {
+      const next = { ...s.profile, ...patch };
+      saveCachedProfile(next);
+      return { profile: next };
+    });
 
     // persist
     await updateUserProfile(uid, patch);
