@@ -377,6 +377,23 @@ app.post("/api/notify/message", async (req, res) => {
       return res.json({ ok: true });
     }
 
+    if (role === "support") {
+      const adminSnap = await admin.database().ref(`users/${uid}`).get();
+      const userRole = adminSnap.exists() ? adminSnap.val()?.role : null;
+      if (userRole !== "admin") return res.status(403).json({ error: "forbidden" });
+      await sendFcmToUser(customerUid, {
+        notification: {
+          title: "GoCrave Support",
+          body: preview,
+        },
+        data: {
+          type: "support_message",
+          customerUid,
+        },
+      });
+      return res.json({ ok: true });
+    }
+
     return res.status(400).json({ error: "invalid_role" });
   } catch (err) {
     return res.status(500).json({ error: "server_error", message: err?.message });
