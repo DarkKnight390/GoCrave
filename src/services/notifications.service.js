@@ -36,5 +36,8 @@ export const notifyOrderDelivered = async (orderId) =>
 export const notifyChatMessage = async ({ runnerId, customerUid, role, text }) =>
   postAuthed("/api/notify/message", { runnerId, customerUid, role, text });
 
+export const notifyPromotion = async (promoId) =>
+  postAuthed("/api/notify/promotion", { promoId });
+
 export const notifyPushTest = async (targetUid) =>
   postAuthed("/api/admin/push-test", { targetUid });

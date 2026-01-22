@@ -1,5 +1,6 @@
 import { rtdb } from "./firebase";
 import { onValue, push, ref, remove, set, update } from "firebase/database";
+import { notifyPromotion } from "./notifications.service";
 
 const promotionsRef = ref(rtdb, "promotions");
 
@@ -38,6 +39,13 @@ export const createPromotion = async (payload) => {
     refNew.key
   );
   await set(refNew, promo);
+  if (promo.isActive !== false) {
+    try {
+      await notifyPromotion(promo.promoId);
+    } catch {
+      // ignore push failures
+    }
+  }
   return promo;
 };
 

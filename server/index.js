@@ -2,15 +2,15 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const admin = require("firebase-admin");
+const twilio = require("twilio");
 
 const app = express();
 const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(",").map((s) => s.trim()).filter(Boolean)
   : [];
-const allowAllOrigins = allowedOrigins.includes("*");
 app.use(
   cors({
-    origin: allowAllOrigins || !allowedOrigins.length ? true : allowedOrigins,
+    origin: allowedOrigins.length ? allowedOrigins : true,
   })
 );
 app.use(express.json());
@@ -59,6 +59,37 @@ const sendFcmToUser = async (uid, payload) => {
     notification: payload.notification,
     data: payload.data || {},
   });
+};
+
+const getAllFcmTokens = async () => {
+  const snap = await admin.database().ref("fcmTokens").get();
+  if (!snap.exists()) return [];
+  const val = snap.val() || {};
+  const out = [];
+  Object.values(val).forEach((byToken) => {
+    if (!byToken) return;
+    Object.entries(byToken).forEach(([key, entry]) => {
+      if (entry && typeof entry === "object" && entry.token) {
+        out.push(entry.token);
+        return;
+      }
+      out.push(key);
+    });
+  });
+  return Array.from(new Set(out.filter(Boolean)));
+};
+
+const sendFcmToTokens = async (tokens, payload) => {
+  if (!tokens?.length) return;
+  const size = 500;
+  for (let i = 0; i < tokens.length; i += size) {
+    const batch = tokens.slice(i, i + size);
+    await admin.messaging().sendEachForMulticast({
+      tokens: batch,
+      notification: payload.notification,
+      data: payload.data || {},
+    });
+  }
 };
 
 const sendFcmToUsers = async (uids, payload) => {
@@ -314,6 +345,47 @@ app.post("/api/notify/order-delivered", async (req, res) => {
   }
 });
 
+app.post("/api/notify/promotion", async (req, res) => {
+  try {
+    const uid = await getAuthUid(req);
+    if (!uid) return res.status(401).json({ error: "unauthorized" });
+
+    const adminSnap = await admin.database().ref(`users/${uid}`).get();
+    const role = adminSnap.exists() ? adminSnap.val()?.role : null;
+    if (role !== "admin") {
+      return res.status(403).json({ error: "forbidden" });
+    }
+
+    const { promoId } = req.body || {};
+    if (!promoId) return res.status(400).json({ error: "missing_promoId" });
+    const promoSnap = await admin.database().ref(`promotions/${promoId}`).get();
+    if (!promoSnap.exists()) return res.status(404).json({ error: "promo_not_found" });
+    const promo = promoSnap.val() || {};
+
+    const title = promo.badge ? `${promo.badge} • ${promo.title || "New promotion"}` : promo.title || "New promotion";
+    const body = promo.subtitle || "New offer available now.";
+    const payload = {
+      notification: {
+        title,
+        body,
+      },
+      data: {
+        type: "promotion",
+        promoId,
+      },
+    };
+    if (promo.imageUrl) {
+      payload.notification.imageUrl = promo.imageUrl;
+    }
+
+    const tokens = await getAllFcmTokens();
+    await sendFcmToTokens(tokens, payload);
+    return res.json({ ok: true, sent: tokens.length });
+  } catch (err) {
+    return res.status(500).json({ error: "server_error", message: err?.message });
+  }
+});
+
 app.post("/api/notify/message", async (req, res) => {
   try {
     const uid = await getAuthUid(req);
@@ -498,6 +570,65 @@ app.post("/api/admin/delete-runner", async (req, res) => {
     return res.json({ ok: true, runnerId, authUid });
   } catch (err) {
     return res.status(500).json({ error: "server_error", message: err?.message });
+  }
+});
+
+/**
+ * Twilio Voice Token Generation
+ * Generates access tokens for Twilio Voice calling
+ */
+app.post("/api/twilio/token", async (req, res) => {
+  try {
+    // Accept identity from body (for flexibility in Render or local dev)
+    let identity = req.body?.identity;
+    if (!identity) {
+      // fallback to Firebase auth if not provided
+      identity = await getAuthUid(req);
+      if (!identity) {
+        return res.status(401).json({ error: "unauthorized" });
+      }
+    }
+
+    // Get Twilio credentials from environment
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const apiKey = process.env.TWILIO_API_KEY;
+    const apiSecret = process.env.TWILIO_API_SECRET;
+    const appSid = process.env.TWILIO_APP_SID; // TwiML App SID
+
+    if (!accountSid || !apiKey || !apiSecret || !appSid) {
+      console.error("Missing Twilio credentials in environment");
+      return res.status(500).json({
+        error: "server_error",
+        message: "Twilio not configured",
+      });
+    }
+
+    // Generate access token
+    const AccessToken = twilio.jwt.AccessToken;
+    const VoiceGrant = AccessToken.VoiceGrant;
+
+    const token = new AccessToken(accountSid, apiKey, apiSecret, { identity });
+
+    // Add voice grant to allow making/receiving calls
+    token.addGrant(
+      new VoiceGrant({
+        outgoingApplicationSid: appSid,
+        incomingAllow: true,
+      })
+    );
+
+    console.log("🎤 Generated Twilio token for user:", identity);
+
+    return res.json({
+      token: token.toJwt(),
+      identity,
+    });
+  } catch (err) {
+    console.error("Failed to generate Twilio token:", err);
+    return res.status(500).json({
+      error: "server_error",
+      message: err?.message,
+    });
   }
 });
 
