@@ -148,43 +148,6 @@ a:hover{opacity:.9}
   color: var(--text);
   outline:none;
 }
-.gc-input:focus{
-  border-color: rgba(255,106,0,0.55);
-  box-shadow: 0 0 0 4px rgba(255,106,0,0.18);
-}
-
-.gc-row{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:10px;
-  margin:10px 0 14px;
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.gc-btn{
-  width:100%;
-  padding:12px 14px;
-  border-radius: 14px;
-  border: none;
-  cursor:pointer;
-  font-weight: 700;
-  letter-spacing: .2px;
-  background: linear-gradient(135deg, var(--brand), var(--brand2));
-  color: #1a0c02;
-  box-shadow: 0 14px 30px rgba(255,106,0,0.22);
-}
-.gc-btn:disabled{
-  opacity:.6;
-  cursor:not-allowed;
-}
-
-.gc-error{
-  margin: 10px 0 0;
-  color: var(--danger);
-  font-size: 13px;
-}
 
 .gc-foot{
   margin-top:16px;
@@ -1273,19 +1236,39 @@ a:hover{opacity:.9}
 }
 
 .gc-miniBtn{
-  padding: 10px 12px;
-  border-radius: 16px;
-  border: 1px solid rgba(255,255,255,0.14);
-  background: rgba(0,0,0,0.22);
-  color: rgba(255,255,255,0.86);
-  cursor:pointer;
-  font-weight: 800;
-}
+    padding: 10px 12px;
+    border-radius: 16px;
+    border: 1px solid rgba(255,255,255,0.14);
+    background: rgba(0,0,0,0.22);
+    color: rgba(255,255,255,0.86);
+    cursor:pointer;
+    font-weight: 800;
+  }
 
-.gc-miniBtn.brand{
-  border-color: rgba(255,106,0,0.35);
-  background: rgba(255,106,0,0.12);
+/* Primary button */
+.gc-btn{
+  padding: 12px 16px;
+  border-radius: 16px;
+  border: none;
+  background: linear-gradient(135deg, var(--brand), var(--brand2));
+  color: #1a0c02;
+  font-weight: 900;
+  cursor: pointer;
+  box-shadow: 0 14px 30px rgba(255,106,0,0.22);
+  transition: transform 120ms ease, box-shadow 160ms ease, opacity 120ms ease;
 }
+.gc-btn:hover{ transform: translateY(-1px); }
+.gc-btn:active{ transform: translateY(0); box-shadow: 0 10px 24px rgba(255,106,0,0.18); }
+.gc-btn:disabled{
+  opacity: .55;
+  cursor: not-allowed;
+  box-shadow: none;
+}
+  
+.gc-miniBtn.brand{
+    border-color: rgba(255,106,0,0.35);
+    background: rgba(255,106,0,0.12);
+  }
 
 .gc-dangerBtn{
   padding: 10px 12px;
@@ -2594,6 +2577,17 @@ a:hover{opacity:.9}
   background: rgba(46,229,157,0.2);
   border: 1px solid rgba(46,229,157,0.35);
   color: #eafff6;
+}
+.gc-callBtn:active:not(:disabled) {
+  transform: scale(0.95);
+}
+.gc-callBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+.gc-callBtnActive {
+  background: rgba(46,229,157,0.4);
+  border: 1px solid rgba(46,229,157,0.6);
 }
 .gc-callBtn.danger{
   background: rgba(255,77,77,0.2);
