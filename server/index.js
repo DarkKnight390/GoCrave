@@ -2,7 +2,6 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const admin = require("firebase-admin");
-const twilio = require("twilio");
 
 const app = express();
 const allowedOrigins = process.env.CORS_ORIGINS
@@ -573,64 +572,6 @@ app.post("/api/admin/delete-runner", async (req, res) => {
   }
 });
 
-/**
- * Twilio Voice Token Generation
- * Generates access tokens for Twilio Voice calling
- */
-app.post("/api/twilio/token", async (req, res) => {
-  try {
-    // Accept identity from body (for flexibility in Render or local dev)
-    let identity = req.body?.identity;
-    if (!identity) {
-      // fallback to Firebase auth if not provided
-      identity = await getAuthUid(req);
-      if (!identity) {
-        return res.status(401).json({ error: "unauthorized" });
-      }
-    }
-
-    // Get Twilio credentials from environment
-    const accountSid = process.env.TWILIO_ACCOUNT_SID;
-    const apiKey = process.env.TWILIO_API_KEY;
-    const apiSecret = process.env.TWILIO_API_SECRET;
-    const appSid = process.env.TWILIO_APP_SID; // TwiML App SID
-
-    if (!accountSid || !apiKey || !apiSecret || !appSid) {
-      console.error("Missing Twilio credentials in environment");
-      return res.status(500).json({
-        error: "server_error",
-        message: "Twilio not configured",
-      });
-    }
-
-    // Generate access token
-    const AccessToken = twilio.jwt.AccessToken;
-    const VoiceGrant = AccessToken.VoiceGrant;
-
-    const token = new AccessToken(accountSid, apiKey, apiSecret, { identity });
-
-    // Add voice grant to allow making/receiving calls
-    token.addGrant(
-      new VoiceGrant({
-        outgoingApplicationSid: appSid,
-        incomingAllow: true,
-      })
-    );
-
-    console.log("🎤 Generated Twilio token for user:", identity);
-
-    return res.json({
-      token: token.toJwt(),
-      identity,
-    });
-  } catch (err) {
-    console.error("Failed to generate Twilio token:", err);
-    return res.status(500).json({
-      error: "server_error",
-      message: err?.message,
-    });
-  }
-});
 
 const port = Number(process.env.PORT || 8080);
 app.listen(port, () => {
