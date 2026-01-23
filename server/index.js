@@ -122,6 +122,97 @@ const getOrder = async (orderId) => {
   return snap.exists() ? snap.val() : null;
 };
 
+const CRAVE_COINS_CONFIG = {
+  milestoneRewardJmd: 10,
+  maxProgressPerOrderPct: 40,
+  tierTable: [
+    { minOrderJmd: 2500, progressPct: 10 },
+    { minOrderJmd: 4000, progressPct: 16 },
+    { minOrderJmd: 5500, progressPct: 20 },
+    { minOrderJmd: 7000, progressPct: 26 },
+    { minOrderJmd: 8500, progressPct: 32 },
+    { minOrderJmd: 10000, progressPct: 40 },
+  ],
+};
+
+const getProgressForOrderTotal = (orderTotalJmd) => {
+  if (!orderTotalJmd || orderTotalJmd <= 0) return 0;
+  let matched = CRAVE_COINS_CONFIG.tierTable[0];
+  for (const tier of CRAVE_COINS_CONFIG.tierTable) {
+    if (orderTotalJmd >= tier.minOrderJmd) {
+      matched = tier;
+    } else {
+      break;
+    }
+  }
+  return Math.min(matched.progressPct, CRAVE_COINS_CONFIG.maxProgressPerOrderPct);
+};
+
+const awardCraveCoinsOnDelivery = async (order) => {
+  const customerUid = order?.userId;
+  if (!customerUid || !order?.orderId) return { ok: false, reason: "missing_fields" };
+
+  const ledgerRef = admin.database().ref(`craveCoinsLedger/${customerUid}`);
+  const ledgerSnap = await ledgerRef.get();
+  if (ledgerSnap.exists()) {
+    const ledger = ledgerSnap.val() || {};
+    const already = Object.values(ledger).some(
+      (entry) => entry?.orderId === order.orderId && entry?.type === "earn_progress"
+    );
+    if (already) return { ok: false, reason: "already_awarded" };
+  }
+
+  const orderTotalJmd = Number(order?.pricing?.subtotal || order?.pricing?.total || 0);
+  const progressDelta = getProgressForOrderTotal(orderTotalJmd);
+  const walletRef = admin.database().ref(`users/${customerUid}/craveCoins`);
+  const walletSnap = await walletRef.get();
+  const wallet = walletSnap.exists()
+    ? walletSnap.val()
+    : { balanceJmd: 0, progressPct: 0, lifetimeEarnedJmd: 0 };
+
+  const totalProgress = Number(wallet.progressPct || 0) + progressDelta;
+  const milestonesHit = Math.floor(totalProgress / 100);
+  const coinsAwarded = milestonesHit * CRAVE_COINS_CONFIG.milestoneRewardJmd;
+  const newProgressPct = totalProgress % 100;
+  const newBalance = Number(wallet.balanceJmd || 0) + coinsAwarded;
+
+  await walletRef.update({
+    balanceJmd: newBalance,
+    progressPct: newProgressPct,
+    lifetimeEarnedJmd: Number(wallet.lifetimeEarnedJmd || 0) + coinsAwarded,
+    updatedAt: Date.now(),
+  });
+
+  const now = Date.now();
+  await ledgerRef.push({
+    type: "earn_progress",
+    orderId: order.orderId,
+    amountJmd: 0,
+    progressDeltaPct: progressDelta,
+    meta: { orderTotalJmd },
+    createdAt: now,
+  });
+
+  if (milestonesHit > 0) {
+    await ledgerRef.push({
+      type: "milestone_reward",
+      orderId: null,
+      amountJmd: coinsAwarded,
+      progressDeltaPct: 0,
+      meta: { milestonesHit },
+      createdAt: now,
+    });
+  }
+
+  return {
+    ok: true,
+    progressDelta,
+    coinsAwarded,
+    newBalance,
+    newProgressPct,
+  };
+};
+
 app.get("/health", (_req, res) => {
   res.json({ ok: true });
 });
@@ -220,6 +311,8 @@ app.post("/api/runner/deliver", async (req, res) => {
         },
       });
     }
+
+    await awardCraveCoinsOnDelivery(order);
 
     return res.json({ ok: true, amountJMD: amount });
   } catch (err) {
