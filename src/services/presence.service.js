@@ -14,26 +14,30 @@ export const startPresence = ({ uid, runnerId }) => {
   connectedUnsub = onValue(infoRef, (snap) => {
     if (snap.val() !== true) return;
 
-    onDisconnect(userRef).set({
-      state: "offline",
-      lastChanged: serverTimestamp(),
-    });
+    onDisconnect(userRef)
+      .set({
+        state: "offline",
+        lastChanged: serverTimestamp(),
+      })
+      .catch(() => {});
 
     set(userRef, {
       state: "online",
       lastChanged: serverTimestamp(),
-    });
+    }).catch(() => {});
 
     if (runnerId) {
       const rRef = runnerPresenceRef(runnerId);
-      onDisconnect(rRef).set({
-        state: "offline",
-        lastChanged: serverTimestamp(),
-      });
+      onDisconnect(rRef)
+        .set({
+          state: "offline",
+          lastChanged: serverTimestamp(),
+        })
+        .catch(() => {});
       set(rRef, {
         state: "online",
         lastChanged: serverTimestamp(),
-      });
+      }).catch(() => {});
     }
   });
 
